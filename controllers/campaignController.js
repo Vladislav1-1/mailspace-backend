@@ -1,17 +1,16 @@
-let campaigns = require('../data/campaignsData');
+const { Campaign } = require('../models');
 
-const getAllCampaigns = (req, res, next) => {
+const getAllCampaigns = async (req, res, next) => {
   try {
     const { status } = req.query;
+    let queryOptions = {};
+
     if (status) {
-      const filtered = campaigns.filter(
-        c => c.status.toLowerCase() === status.toLowerCase()
-      );
-      return res.status(200).json({
-        total: filtered.length,
-        data: filtered
-      });
+      queryOptions.where = { status: status.toLowerCase() };
     }
+
+    const campaigns = await Campaign.findAll(queryOptions);
+
     res.status(200).json({
       total: campaigns.length,
       data: campaigns
@@ -21,22 +20,17 @@ const getAllCampaigns = (req, res, next) => {
   }
 };
 
-const getCampaignById = (req, res, next) => {
+const getCampaignById = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
-      return res.status(400).json({
-        error: "Некорректный ID",
-        message: "Параметр ID должен быть числом"
-      });
+      return res.status(400).json({ error: "Некорректный ID", message: "ID должен быть числом" });
     }
 
-    const campaign = campaigns.find(c => c.id === id);
+    const campaign = await Campaign.findByPk(id);
+
     if (!campaign) {
-      return res.status(404).json({
-        error: "Не найдено",
-        message: `Рассылка с ID ${id} не найдена`
-      });
+      return res.status(404).json({ error: "Не найдено", message: `Рассылка с ID ${id} не найдена` });
     }
 
     res.status(200).json({ data: campaign });
@@ -45,40 +39,25 @@ const getCampaignById = (req, res, next) => {
   }
 };
 
-const createCampaign = (req, res, next) => {
+const createCampaign = async (req, res, next) => {
   try {
     const { title, subject, template, recipientsCount, status } = req.body;
 
-    if (!title || typeof title !== 'string' || !title.trim()) {
-      return res.status(400).json({
-        error: "Ошибка валидации",
-        message: "Поле 'title' обязательно и не должно быть пустым"
-      });
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: "Ошибка валидации", message: "Поле 'title' обязательно" });
+    }
+    if (!subject || !subject.trim()) {
+      return res.status(400).json({ error: "Ошибка валидации", message: "Поле 'subject' обязательно" });
     }
 
-    if (!subject || typeof subject !== 'string' || !subject.trim()) {
-      return res.status(400).json({
-        error: "Ошибка валидации",
-        message: "Поле 'subject' обязательно и не должно быть пустым"
-      });
-    }
-
-    const newId = campaigns.length > 0
-      ? Math.max(...campaigns.map(c => c.id)) + 1
-      : 1;
-
-    const newCampaign = {
-      id: newId,
+    const newCampaign = await Campaign.create({
       title: title.trim(),
       subject: subject.trim(),
       template: template || "default_template",
       status: status || "draft",
       recipientsCount: Number(recipientsCount) || 0,
-      openRate: 0,
-      createdAt: new Date().toISOString()
-    };
-
-    campaigns.push(newCampaign);
+      openRate: 0.0
+    });
 
     res.status(201).json({
       message: "Email-рассылка успешно создана",
@@ -89,78 +68,58 @@ const createCampaign = (req, res, next) => {
   }
 };
 
-const updateCampaign = (req, res, next) => {
+const updateCampaign = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
-      return res.status(400).json({
-        error: "Некорректный ID",
-        message: "Параметр ID должен быть числом"
-      });
-    }
-
-    const index = campaigns.findIndex(c => c.id === id);
-    if (index === -1) {
-      return res.status(404).json({
-        error: "Не найдено",
-        message: `Рассылка с ID ${id} не найдена`
-      });
+      return res.status(400).json({ error: "Некорректный ID", message: "ID должен быть числом" });
     }
 
     const { title, subject, template, status, recipientsCount, openRate } = req.body;
-
     if (!title || !subject) {
-      return res.status(400).json({
-        error: "Ошибка валидации",
-        message: "При полном обновлении (PUT) поля 'title' и 'subject' обязательны"
-      });
+      return res.status(400).json({ error: "Ошибка валидации", message: "Поля 'title' и 'subject' обязательны при PUT" });
     }
 
-    campaigns[index] = {
-      id: id,
+    const campaign = await Campaign.findByPk(id);
+    if (!campaign) {
+      return res.status(404).json({ error: "Не найдено", message: `Рассылка с ID ${id} не найдена` });
+    }
+
+    await campaign.update({
       title: title.trim(),
       subject: subject.trim(),
-      template: template || campaigns[index].template,
-      status: status || campaigns[index].status,
-      recipientsCount: recipientsCount !== undefined ? Number(recipientsCount) : campaigns[index].recipientsCount,
-      openRate: openRate !== undefined ? Number(openRate) : campaigns[index].openRate,
-      createdAt: campaigns[index].createdAt,
-      updatedAt: new Date().toISOString()
-    };
+      template: template || campaign.template,
+      status: status || campaign.status,
+      recipientsCount: recipientsCount !== undefined ? Number(recipientsCount) : campaign.recipientsCount,
+      openRate: openRate !== undefined ? Number(openRate) : campaign.openRate
+    });
 
     res.status(200).json({
       message: "Email-рассылка успешно обновлена",
-      data: campaigns[index]
+      data: campaign
     });
   } catch (error) {
     next(error);
   }
 };
 
-const deleteCampaign = (req, res, next) => {
+const deleteCampaign = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
-      return res.status(400).json({
-        error: "Некорректный ID",
-        message: "Параметр ID должен быть числом"
-      });
+      return res.status(400).json({ error: "Некорректный ID", message: "ID должен быть числом" });
     }
 
-    const index = campaigns.findIndex(c => c.id === id);
-    if (index === -1) {
-      return res.status(404).json({
-        error: "Не найдено",
-        message: `Рассылка с ID ${id} не найдена или уже была удалена ранее`
-      });
+    const campaign = await Campaign.findByPk(id);
+    if (!campaign) {
+      return res.status(404).json({ error: "Не найдено", message: `Рассылка с ID ${id} не найдена` });
     }
 
-    const deletedItem = campaigns.splice(index, 1)[0];
+    await campaign.destroy();
 
     res.status(200).json({
       message: "Рассылка успешно удалена",
-      deletedId: id,
-      deletedItem: deletedItem
+      deletedId: id
     });
   } catch (error) {
     next(error);

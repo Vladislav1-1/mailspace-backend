@@ -1,8 +1,7 @@
 const express = require('express');
-const campaignRoutes = require('./routes/campaignRoutes');
-
 const app = express();
 const PORT = process.env.PORT || 3000;
+const campaignRoutes = require('./routes/campaignRoutes');
 
 app.use(express.json());
 
