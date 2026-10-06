@@ -81,32 +81,4 @@ const getProfile = async (req, res, next) => {
   }
 };
 
-const changePassword = async (req, res, next) => {
-  try {
-    const { oldPassword, newPassword } = req.body;
-    const userId = req.user.id;
-
-    if (!oldPassword || !newPassword) {
-      return res.status(400).json({ error: "Ошибка валидации", message: "Укажите старый и новый пароль" });
-    }
-
-    const user = await User.findByPk(userId);
-    if (!user) {
-      return res.status(404).json({ error: "Не найдено", message: "Пользователь не найден" });
-    }
-
-    const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
-    if (!isMatch) {
-      return res.status(401).json({ error: "Ошибка авторизации", message: "Указан неверный старый пароль" });
-    }
-
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
-    await user.save();
-
-    res.status(200).json({ message: "Пароль успешно изменен" });
-  } catch (error) {
-    next(error);
-  }
-};
-
-module.exports = { register, login, getProfile, changePassword };
+module.exports = { register, login, getProfile };
