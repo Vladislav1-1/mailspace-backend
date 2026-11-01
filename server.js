@@ -1,11 +1,17 @@
 require('dotenv').config();
 const express = require('express');
-const app = express();
-const PORT = process.env.PORT || 3000;
+const cors = require('cors');
+const { sequelize } = require('./models');
 const campaignRoutes = require('./routes/campaignRoutes');
 const authRoutes = require('./routes/authRoutes');
 
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
 app.use(express.json());
+
+sequelize.sync({ alter: true });
 
 app.use((req, res, next) => {
   console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
@@ -22,7 +28,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/campaigns', campaignRoutes);
-app.use('/auth', authRoutes); 
+app.use('/auth', authRoutes);
 
 app.use((req, res, next) => {
   res.status(404).json({

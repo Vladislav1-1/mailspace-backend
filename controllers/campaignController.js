@@ -3,7 +3,9 @@ const { Campaign } = require('../models');
 const getAllCampaigns = async (req, res, next) => {
   try {
     const { status } = req.query;
-    let queryOptions = {};
+    let queryOptions = {
+      order: [['createdAt', 'DESC']]
+    };
 
     if (status) {
       queryOptions.where = { status: status.toLowerCase() };
@@ -41,7 +43,7 @@ const getCampaignById = async (req, res, next) => {
 
 const createCampaign = async (req, res, next) => {
   try {
-    const { title, subject, template, recipientsCount, status } = req.body;
+    const { title, subject, template, recipientsCount, status, priority, scheduledDate, authorEmail } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ error: "Ошибка валидации", message: "Поле 'title' обязательно" });
@@ -55,8 +57,11 @@ const createCampaign = async (req, res, next) => {
       subject: subject.trim(),
       template: template || "default_template",
       status: status || "draft",
+      priority: priority || "normal",
       recipientsCount: Number(recipientsCount) || 0,
-      openRate: 0.0
+      openRate: 0.0,
+      scheduledDate: scheduledDate || null,
+      authorEmail: authorEmail || null
     });
 
     res.status(201).json({
@@ -75,7 +80,8 @@ const updateCampaign = async (req, res, next) => {
       return res.status(400).json({ error: "Некорректный ID", message: "ID должен быть числом" });
     }
 
-    const { title, subject, template, status, recipientsCount, openRate } = req.body;
+    const { title, subject, template, status, priority, recipientsCount, openRate, scheduledDate } = req.body;
+
     if (!title || !subject) {
       return res.status(400).json({ error: "Ошибка валидации", message: "Поля 'title' и 'subject' обязательны при PUT" });
     }
@@ -90,8 +96,10 @@ const updateCampaign = async (req, res, next) => {
       subject: subject.trim(),
       template: template || campaign.template,
       status: status || campaign.status,
+      priority: priority || campaign.priority,
       recipientsCount: recipientsCount !== undefined ? Number(recipientsCount) : campaign.recipientsCount,
-      openRate: openRate !== undefined ? Number(openRate) : campaign.openRate
+      openRate: openRate !== undefined ? Number(openRate) : campaign.openRate,
+      scheduledDate: scheduledDate !== undefined ? scheduledDate : campaign.scheduledDate
     });
 
     res.status(200).json({

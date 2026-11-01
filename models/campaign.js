@@ -1,17 +1,9 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Campaign extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
-    static associate(models) {
-      // define association here
-    }
+    static associate(models) {}
   }
   Campaign.init({
     title: DataTypes.STRING,
@@ -19,7 +11,13 @@ module.exports = (sequelize, DataTypes) => {
     template: DataTypes.STRING,
     status: DataTypes.STRING,
     recipientsCount: DataTypes.INTEGER,
-    openRate: DataTypes.FLOAT
+    openRate: DataTypes.FLOAT,
+    priority: {
+      type: DataTypes.STRING,
+      defaultValue: 'normal'
+    },
+    scheduledDate: DataTypes.STRING,
+    authorEmail: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Campaign',
